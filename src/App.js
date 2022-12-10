@@ -5,31 +5,38 @@ import GuessInput from './GuessInput.js';
 import FoundSolutions from './FoundSolutions.js';
 import SummaryResults from './SummaryResults.js';
 import ToggleGameState from './ToggleGameState.js';
-import { GAME_STATE } from './GameState.js';
 import { RandomGrid } from './RandomGen.js';
 import logo from './logo.png';
 import './App.css';
+import firebase from 'firebase/compat/app'
+import 'firebase/compat/auth'
+import 'firebase/compat/firestore'
+import { GAME_STATE } from './GameState.js';
 
 
 function App() {
-  const [allSolutions, setAllSolutions] = useState([]);  // solutions from solver
-  const [foundSolutions, setFoundSolutions] = useState([]);  // found by user
-  const [gameState, setGameState] = useState(GAME_STATE.BEFORE); // Just an enuerator or the three states see below
-  const [grid, setGrid] = useState([]);   // the grid
-  const [totalTime, setTotalTime] = useState(0);  // total time elapsed
-  const [size, setSize] = useState(3);  // selected grid size
 
+  const [allSolutions, setAllSolutions] = useState([]);
+  const [foundSolutions, setFoundSolutions] = useState([]);
+  const [gameState, setGameState] = useState(GAME_STATE.BEFORE);
+  const [grid, setGrid] = useState([]);
+  const [totalTime, setTotalTime] = useState(0);
+  const [size, setSize] = useState(3);
 
+  // useEffect will trigger when the array items in the second argument are
+  // updated so whenever grid is updated, we will recompute the solutions
   useEffect(() => {
     const wordList = require('./full-wordlist.json');
     let tmpAllSolutions = findAllSolutions(grid, wordList.words);
     setAllSolutions(tmpAllSolutions);
   }, [grid]);
 
-
+  // This will run when gameState changes.
+  // When a new game is started, generate a new random grid and reset solutions
   useEffect(() => {
     if (gameState === GAME_STATE.IN_PROGRESS) {
-      setGrid(RandomGrid(size));
+      if (size !== -11111)  // if Grid is not loaded from firestore
+        setGrid(RandomGrid(size));
       setFoundSolutions([]);
     }
   }, [gameState, size]);
@@ -39,16 +46,18 @@ function App() {
     setFoundSolutions([...foundSolutions, answer]);
   }
 
-
   return (
     <div className="App">
 
-      <img src={logo} width="25%" height="25%" className="logo" alt="Bison Boggle Logo" />
+      <img src={logo} width="25%" height="25%" alt="Bison Boggle Logo" />
 
       <ToggleGameState gameState={gameState}
         setGameState={(state) => setGameState(state)}
         setSize={(state) => setSize(state)}
-        setTotalTime={(state) => setTotalTime(state)} />
+        setTotalTime={(state) => setTotalTime(state)}
+        numFound={foundSolutions.length}
+        theGrid={JSON.stringify(grid)}
+        setGrid={(state) => setGrid(state)} />
 
       {gameState === GAME_STATE.IN_PROGRESS &&
         <div>
@@ -65,6 +74,7 @@ function App() {
           <Board board={grid} />
           <SummaryResults words={foundSolutions} totalTime={totalTime} />
           <FoundSolutions headerText="Missed Words [wordsize > 3]: " words={allSolutions} />
+
 
         </div>
       }
